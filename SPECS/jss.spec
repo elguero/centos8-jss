@@ -7,7 +7,7 @@ URL:            http://www.dogtagpki.org/wiki/JSS
 License:        MPLv1.1 or GPLv2+ or LGPLv2+
 
 Version:        4.6.2
-Release:        4%{?_timestamp}%{?_commit_id}%{?dist}
+Release:        6%{?_timestamp}%{?_commit_id}%{?dist}
 # global         _phase -a1
 
 # To generate the source tarball:
@@ -29,6 +29,8 @@ Patch0: 0001-Fix-NativeProxy-reference-tracker.patch
 Patch1: 0002-Fix-swapped-parameter-names-with-PBE.patch
 Patch3: 0003-Use-specified-algorithm-for-KeyWrap.patch
 Patch4: 0004-Remove-token-key-checks.patch
+Patch5: 0005-Fix-NativeProxy-release.patch
+Patch6: 0006-Fix-SSLSocket-closure.patch
 
 ################################################################################
 # Build Dependencies
@@ -163,6 +165,15 @@ cp -p *.txt $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 
 ################################################################################
 %changelog
+* Wed Apr 15 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-6
+- NativeProxy never calls releaseNativeResources - Memory Leak
+  Additional patch to fix SSLSocket resource freeing
+  Bugzilla #1822402
+
+* Tue Apr 14 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-5
+- NativeProxy never calls releaseNativeResources - Memory Leak
+  Bugzilla #1822402
+
 * Mon Mar 23 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-4
 - Red Hat Bugzilla #1807371 - KRA-HSM: Async and sync key recovery using kra agent web is failing
 
