@@ -1,0 +1,60 @@
+From 55482c8bfa0addeb9db7b590703ba3704c5db167 Mon Sep 17 00:00:00 2001
+From: Alexander Scheel <ascheel@redhat.com>
+Date: Fri, 28 Feb 2020 14:39:29 -0500
+Subject: [PATCH 2/2] Use specified algorithm for KeyWrap
+
+When the token-specified from of EncryptedPrivateKeyInfo.createPBE is
+called, it would always request DES3_CBC_PAD as the key wrapping
+algorithm, regardless of the input PBE key type. However, the other form
+(with an implicit token) was correctly handling this case.
+
+Introduces a new KeyWrapAlgorithm method to take an OBJECT_IDENTIFIER
+instead of having to convert to/from a String form.
+
+Signed-off-by: Alexander Scheel <ascheel@redhat.com>
+---
+ org/mozilla/jss/crypto/KeyWrapAlgorithm.java                | 5 ++++-
+ org/mozilla/jss/pkix/primitive/EncryptedPrivateKeyInfo.java | 4 ++--
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/org/mozilla/jss/crypto/KeyWrapAlgorithm.java b/org/mozilla/jss/crypto/KeyWrapAlgorithm.java
+index 3113f614..3a106977 100644
+--- a/org/mozilla/jss/crypto/KeyWrapAlgorithm.java
++++ b/org/mozilla/jss/crypto/KeyWrapAlgorithm.java
+@@ -138,7 +138,10 @@ public class KeyWrapAlgorithm extends Algorithm {
+ 
+     public static KeyWrapAlgorithm fromOID(String wrapOID) throws NoSuchAlgorithmException {
+         OBJECT_IDENTIFIER oid = new OBJECT_IDENTIFIER(wrapOID);
++        return fromOID(oid);
++    }
+ 
++    public static KeyWrapAlgorithm fromOID(OBJECT_IDENTIFIER oid) throws NoSuchAlgorithmException {
+         if (oid.equals(AES_KEY_WRAP_PAD_OID))
+             return AES_KEY_WRAP_PAD;
+ 
+@@ -154,6 +157,6 @@ public class KeyWrapAlgorithm extends Algorithm {
+         if (oid.equals(DES_CBC_PAD_OID))
+             return DES_CBC_PAD;
+ 
+-        throw new NoSuchAlgorithmException("Unknown Algorithm for OID: " + wrapOID);
++        throw new NoSuchAlgorithmException("Unknown Algorithm for OID: " + oid);
+     }
+ }
+diff --git a/org/mozilla/jss/pkix/primitive/EncryptedPrivateKeyInfo.java b/org/mozilla/jss/pkix/primitive/EncryptedPrivateKeyInfo.java
+index ebd269f3..abfc39a7 100644
+--- a/org/mozilla/jss/pkix/primitive/EncryptedPrivateKeyInfo.java
++++ b/org/mozilla/jss/pkix/primitive/EncryptedPrivateKeyInfo.java
+@@ -337,8 +337,8 @@ public class EncryptedPrivateKeyInfo implements ASN1Value {
+             }
+         }
+ 
+-        KeyWrapper wrapper = token.getKeyWrapper(
+-                KeyWrapAlgorithm.DES3_CBC_PAD);
++        // wrap the key
++        KeyWrapper wrapper = token.getKeyWrapper(KeyWrapAlgorithm.fromOID(encAlg.toOID()));
+         wrapper.initWrap(key, params);
+         byte encrypted[] = wrapper.wrap(pri);
+ 
+-- 
+2.24.1
+

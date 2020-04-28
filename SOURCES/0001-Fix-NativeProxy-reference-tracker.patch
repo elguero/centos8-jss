@@ -1,0 +1,53 @@
+From 91514ca0a2979ba778d27220ced0cd312e2cd2d2 Mon Sep 17 00:00:00 2001
+From: Alexander Scheel <ascheel@redhat.com>
+Date: Tue, 29 Oct 2019 10:43:56 -0400
+Subject: [PATCH] Fix NativeProxy reference tracker
+
+In eb5df01003d74b57473eacb84e538d31f5bb06ca, I introduced a bug by
+setting mPointer after trying to add NativeProxy to the registry. In
+most instances this won't matter, however, if another instance exists in
+the HashSet with the same hash value, the equals comparator will be
+used, triggering a NPE.
+
+Signed-off-by: Alexander Scheel <ascheel@redhat.com>
+---
+ org/mozilla/jss/util/NativeProxy.java | 13 +++++--------
+ 1 file changed, 5 insertions(+), 8 deletions(-)
+
+diff --git a/org/mozilla/jss/util/NativeProxy.java b/org/mozilla/jss/util/NativeProxy.java
+index 1c6d1aa5..a0811f76 100644
+--- a/org/mozilla/jss/util/NativeProxy.java
++++ b/org/mozilla/jss/util/NativeProxy.java
+@@ -40,8 +40,8 @@ public abstract class NativeProxy implements AutoCloseable
+      */
+     public NativeProxy(byte[] pointer) {
+ 		assert(pointer!=null);
+-        registry.add(this);
+         mPointer = pointer;
++        registry.add(this);
+ 
+         if (saveStacktraces) {
+             mTrace = Arrays.toString(Thread.currentThread().getStackTrace());
+@@ -61,15 +61,12 @@ public abstract class NativeProxy implements AutoCloseable
+         if( ! (obj instanceof NativeProxy) ) {
+             return false;
+         }
+-        if( ((NativeProxy)obj).mPointer.length != mPointer.length) {
++        if (((NativeProxy)obj).mPointer == null) {
++            /* If mPointer is null, we have no way to compare the values
++             * of the pointers, so assume they're unequal. */
+             return false;
+         }
+-        for(int i=0; i < mPointer.length; i++) {
+-            if(mPointer[i] != ((NativeProxy)obj).mPointer[i]) {
+-                return false;
+-            }
+-        }
+-        return true;
++        return Arrays.equals(((NativeProxy)obj).mPointer, mPointer);
+     }
+ 
+     /**
+-- 
+2.21.0
+

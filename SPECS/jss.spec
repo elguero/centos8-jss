@@ -6,8 +6,8 @@ Summary:        Java Security Services (JSS)
 URL:            http://www.dogtagpki.org/wiki/JSS
 License:        MPLv1.1 or GPLv2+ or LGPLv2+
 
-Version:        4.6.0
-Release:        5%{?_timestamp}%{?_commit_id}%{?dist}
+Version:        4.6.2
+Release:        4%{?_timestamp}%{?_commit_id}%{?dist}
 # global         _phase -a1
 
 # To generate the source tarball:
@@ -25,13 +25,10 @@ Source:         https://github.com/dogtagpki/%{name}/archive/v%{version}%{?_phas
 #     <version tag> \
 #     > jss-VERSION-RELEASE.patch
 # Patch: jss-VERSION-RELEASE.patch
-Patch1:         0001-Disable-buffer-based-tests.patch
-Patch2:         0002-Support-LD_FLAGS-from-environment.patch
-Patch3:         0003-Remove-legacy-DSA-implementation.patch
-Patch4:         0004-JSS-CVE-2019-14823-fix.patch
-Patch5:         0005-Add-helper-to-run-a-single-test-case.patch
-Patch6:         0006-Add-script-to-add-common-root-CAs.patch
-Patch7:         0007-Add-optional-test-case-against-badssl.com.patch
+Patch0: 0001-Fix-NativeProxy-reference-tracker.patch
+Patch1: 0002-Fix-swapped-parameter-names-with-PBE.patch
+Patch3: 0003-Use-specified-algorithm-for-KeyWrap.patch
+Patch4: 0004-Remove-token-key-checks.patch
 
 ################################################################################
 # Build Dependencies
@@ -88,7 +85,6 @@ This only works with gcj. Other JREs require that JCE providers be signed.
 ################################################################################
 
 Summary:        Java Security Services (JSS) Javadocs
-Group:          Documentation
 Requires:       jss = %{version}-%{release}
 
 %description javadoc
@@ -112,6 +108,9 @@ export BUILD_OPT=1
 # Generate symbolic info for debuggers
 CFLAGS="-g $RPM_OPT_FLAGS"
 export CFLAGS
+
+# Check if we're in FIPS mode
+modutil -dbdir /etc/pki/nssdb -chkfips true | grep -q enabled && export FIPS_ENABLED=1
 
 # The Makefile is not thread-safe
 rm -rf build && mkdir -p build && cd build
@@ -164,14 +163,24 @@ cp -p *.txt $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 
 ################################################################################
 %changelog
+* Mon Mar 23 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-4
+- Red Hat Bugzilla #1807371 - KRA-HSM: Async and sync key recovery using kra agent web is failing
+
+* Mon Mar 02 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-3
+- Red Hat Bugzilla #1807371 - KRA-HSM: Async and sync key recovery using kra agent web is failing
+
+* Tue Oct 29 2019 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-2
+- Red Hat Bugzilla #1730767 - JSS: Wrap NSS CMAC + KDF implementations
+- Rebased to JSS 4.6.2
+
 * Wed Sep 11 2019 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.0-5
-- Bugzilla #1747987 - CVE 2019-14823 jss: OCSP policy "Leaf and Chain" implicitly trusts the root certificate
+- Red Hat Bugzilla #1747987 - CVE 2019-14823 jss: OCSP policy "Leaf and Chain" implicitly trusts the root certificate
 
 * Wed Aug 14 2019 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.0-4
 - Red Hat Bugzilla #1698059 - pki-core implements crypto
 
 * Tue Jul 16 2019 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.0-3
-- Red Hat Bugilla #1721135 - JSS - LD_FLAGS support
+- Red Hat Bugzilla #1721135 - JSS - LD_FLAGS support
 
 * Wed Jun 12 2019 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.0-2
 - Minor updates to release
