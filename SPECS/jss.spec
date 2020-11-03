@@ -6,9 +6,9 @@ Summary:        Java Security Services (JSS)
 URL:            http://www.dogtagpki.org/wiki/JSS
 License:        MPLv1.1 or GPLv2+ or LGPLv2+
 
-Version:        4.6.2
-Release:        6%{?_timestamp}%{?_commit_id}%{?dist}
-# global         _phase -a1
+Version:        4.7.3
+Release:        1%{?_timestamp}%{?_commit_id}%{?dist}
+#global         _phase -a1
 
 # To generate the source tarball:
 # $ git clone https://github.com/dogtagpki/jss.git
@@ -25,12 +25,6 @@ Source:         https://github.com/dogtagpki/%{name}/archive/v%{version}%{?_phas
 #     <version tag> \
 #     > jss-VERSION-RELEASE.patch
 # Patch: jss-VERSION-RELEASE.patch
-Patch0: 0001-Fix-NativeProxy-reference-tracker.patch
-Patch1: 0002-Fix-swapped-parameter-names-with-PBE.patch
-Patch3: 0003-Use-specified-algorithm-for-KeyWrap.patch
-Patch4: 0004-Remove-token-key-checks.patch
-Patch5: 0005-Fix-NativeProxy-release.patch
-Patch6: 0006-Fix-SSLSocket-closure.patch
 
 ################################################################################
 # Build Dependencies
@@ -40,11 +34,13 @@ Patch6: 0006-Fix-SSLSocket-closure.patch
 BuildRequires:  git
 BuildRequires:  make
 BuildRequires:  cmake
+BuildRequires:  zip
+BuildRequires:  unzip
 
 BuildRequires:  gcc-c++
 BuildRequires:  nspr-devel >= 4.13.1
-BuildRequires:  nss-devel >= 3.30
-BuildRequires:  nss-tools >= 3.30
+BuildRequires:  nss-devel >= 3.44
+BuildRequires:  nss-tools >= 3.44
 BuildRequires:  java-devel
 BuildRequires:  jpackage-utils
 BuildRequires:  slf4j
@@ -55,11 +51,10 @@ BuildRequires:  glassfish-jaxb-api
 BuildRequires:  slf4j-jdk14
 %endif
 BuildRequires:  apache-commons-lang
-BuildRequires:  apache-commons-codec
 
 BuildRequires:  junit
 
-Requires:       nss >= 3.30
+Requires:       nss >= 3.44
 Requires:       java-headless
 Requires:       jpackage-utils
 Requires:       slf4j
@@ -70,7 +65,6 @@ Requires:       glassfish-jaxb-api
 Requires:       slf4j-jdk14
 %endif
 Requires:       apache-commons-lang
-Requires:       apache-commons-codec
 
 Conflicts:      ldapjdk < 4.20
 Conflicts:      idm-console-framework < 1.2
@@ -114,15 +108,28 @@ export CFLAGS
 # Check if we're in FIPS mode
 modutil -dbdir /etc/pki/nssdb -chkfips true | grep -q enabled && export FIPS_ENABLED=1
 
+# RHEL's CMake doesn't support -B flag.
+%if 0%{?rhel}
+%{__mkdir_p} %{_vpath_builddir}
+cd %{_vpath_builddir}
+%endif
+
 # The Makefile is not thread-safe
-rm -rf build && mkdir -p build && cd build
 %cmake \
     -DJAVA_HOME=%{java_home} \
     -DJAVA_LIB_INSTALL_DIR=%{_jnidir} \
+%if 0%{?rhel}
     ..
+%else
+    -B %{_vpath_builddir}
+%endif
+
+%if 0%{?fedora}
+cd %{_vpath_builddir}
+%endif
 
 %{__make} all
-%{__make} javadoc || true
+%{__make} javadoc
 ctest --output-on-failure
 
 ################################################################################
@@ -132,19 +139,19 @@ ctest --output-on-failure
 
 # jars
 install -d -m 0755 $RPM_BUILD_ROOT%{_jnidir}
-install -m 644 build/jss4.jar ${RPM_BUILD_ROOT}%{_jnidir}/jss4.jar
+install -m 644 %{_vpath_builddir}/jss4.jar ${RPM_BUILD_ROOT}%{_jnidir}/jss4.jar
 
 # We have to use the name libjss4.so because this is dynamically
 # loaded by the jar file.
 install -d -m 0755 $RPM_BUILD_ROOT%{_libdir}/jss
-install -m 0755 build/libjss4.so ${RPM_BUILD_ROOT}%{_libdir}/jss/
+install -m 0755 %{_vpath_builddir}/libjss4.so ${RPM_BUILD_ROOT}%{_libdir}/jss/
 pushd  ${RPM_BUILD_ROOT}%{_libdir}/jss
     ln -fs %{_jnidir}/jss4.jar jss4.jar
 popd
 
 # javadoc
 install -d -m 0755 $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
-cp -rp build/docs/* $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
+cp -rp %{_vpath_builddir}/docs/* $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 cp -p jss.html $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 cp -p *.txt $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 
@@ -153,7 +160,8 @@ cp -p *.txt $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 %files
 
 %defattr(-,root,root,-)
-%doc jss.html MPL-1.1.txt gpl.txt lgpl.txt
+%doc jss.html
+%license MPL-1.1.txt gpl.txt lgpl.txt
 %{_libdir}/*
 %{_jnidir}/*
 
@@ -165,14 +173,29 @@ cp -p *.txt $RPM_BUILD_ROOT%{_javadocdir}/%{name}-%{version}
 
 ################################################################################
 %changelog
-* Wed Apr 15 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-6
-- NativeProxy never calls releaseNativeResources - Memory Leak
-  Additional patch to fix SSLSocket resource freeing
-  Bugzilla #1822402
+* Fri Sep 11 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.3-1
+- Rebase to upstream stable release JSS v4.7.3
+- Red Hat Bugzilla #1873235 - Fix SSL_ERROR_INAPPROPRIATE_FALLBACK_ALERT in pki ca-user-cert-add
 
-* Tue Apr 14 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-5
-- NativeProxy never calls releaseNativeResources - Memory Leak
-  Bugzilla #1822402
+* Thu Aug 06 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.2-1
+- Rebase to upstream stable release JSS v4.7.2
+- Red Hat Bugzilla #1822246 - Fix SSLSocket NULL pointer deference after close
+
+* Fri Jul 31 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.1-1
+- Rebase to upstream stable release JSS v4.7.1
+
+* Thu Jul 09 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.0-1
+- Rebase to upstream stable release JSS v4.7.0
+- Fixed TestSSLEngine
+
+* Thu Jun 25 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.0-0.4
+- Rebased to JSS 4.7.0-b4
+
+* Mon Jun 22 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.0-0.3
+- Rebased to JSS 4.7.0-b3
+
+* Tue May 26 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.7.0-0.1
+- Rebased to JSS 4.7.0-b1
 
 * Mon Mar 23 2020 Red Hat PKI Team <rhcs-maint@redhat.com> 4.6.2-4
 - Red Hat Bugzilla #1807371 - KRA-HSM: Async and sync key recovery using kra agent web is failing
