@@ -1,0 +1,12 @@
+diff -ur jss-4.7.3-orig/org/mozilla/jss/pkcs11/PKCS11Constants.java jss-4.7.3-mod/org/mozilla/jss/pkcs11/PKCS11Constants.java
+--- jss-4.7.3-orig/org/mozilla/jss/pkcs11/PKCS11Constants.java	2020-09-11 15:15:45.000000000 -0500
++++ jss-4.7.3-mod/org/mozilla/jss/pkcs11/PKCS11Constants.java	2021-03-16 20:15:08.203438547 -0500
+@@ -5632,7 +5632,7 @@
+      *
+      * Source file: /usr/include/nss3/pkcs11t.h
+      */
+-    public static final long CKR_PUBLIC_KEY_INVALID = 0x0000001BL;
++    public static final long CKR_PUBLIC_KEY_INVALID = 0x000001B9L;
+ 
+     /**
+      * Content automatically generated; see NSS documentation for more information.

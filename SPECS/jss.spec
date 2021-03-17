@@ -26,6 +26,10 @@ Source:         https://github.com/dogtagpki/%{name}/archive/v%{version}%{?_phas
 #     > jss-VERSION-RELEASE.patch
 # Patch: jss-VERSION-RELEASE.patch
 
+# https://hg.mozilla.org/projects/nss/rev/f9bcf45ca3bff737adafe2c6521aebdd8c4f2f51
+# https://github.com/dogtagpki/jss/pull/679/files
+Patch0: Update-PKCS11Constants-Based-On-NSS-3.60.patch
+
 ################################################################################
 # Build Dependencies
 ################################################################################
